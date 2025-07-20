@@ -5,8 +5,12 @@ import { FileUpload } from '@/components/FileUpload';
 import { RulesEditor } from '@/components/RulesEditor';
 import { ResultsPanel } from '@/components/ResultsPanel';
 import { Shield, CheckCircle } from 'lucide-react';
+import { parsePptxFile } from '@/lib/pptx-parser';
+import { parseMarkdownRules } from '@/lib/rules-parser';
+import { validatePresentation } from '@/lib/rule-validator';
+import { useToast } from '@/hooks/use-toast';
 
-interface Violation {
+interface UIViolation {
   slide: number;
   description: string;
   elements: string[];
@@ -15,40 +19,71 @@ interface Violation {
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);
   const [rules, setRules] = useState('');
-  const [violations, setViolations] = useState<Violation[]>([]);
+  const [violations, setViolations] = useState<UIViolation[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasResults, setHasResults] = useState(false);
+
+  const { toast } = useToast();
 
   const handleSubmit = async () => {
     if (!file || !rules.trim()) return;
 
     setIsProcessing(true);
     
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock violations for demo
-    const mockViolations: Violation[] = [
-      {
-        slide: 1,
-        description: "Title slide contains images, which violates the 'No images allowed on title slides' rule",
-        elements: ["Background image: company-logo.png", "Decorative element: banner.jpg"]
-      },
-      {
-        slide: 3,
-        description: "Text color not in allowed list (found blue, only black and red are allowed)",
-        elements: ["Subtitle text in blue color", "Bullet points using blue color"]
-      },
-      {
-        slide: 5,
-        description: "Title font size is below minimum requirement (found 24pt, minimum is 36pt)",
-        elements: ["Main title: 24pt Arial"]
+    try {
+      // Parse the PowerPoint file
+      toast({
+        title: "Processing file...",
+        description: "Parsing PowerPoint structure",
+      });
+      
+      const presentation = await parsePptxFile(file);
+      
+      // Parse the markdown rules
+      toast({
+        title: "Processing rules...",
+        description: "Parsing design rules",
+      });
+      
+      const designRules = parseMarkdownRules(rules);
+      
+      if (designRules.length === 0) {
+        throw new Error('No valid rules found. Please check your markdown format.');
       }
-    ];
-    
-    setViolations(mockViolations);
-    setIsProcessing(false);
-    setHasResults(true);
+      
+      // Validate presentation against rules
+      toast({
+        title: "Validating...",
+        description: "Checking for design violations",
+      });
+      
+      const foundViolations = validatePresentation(presentation, designRules);
+      
+      // Convert to the format expected by ResultsPanel
+      const formattedViolations: UIViolation[] = foundViolations.map(v => ({
+        slide: v.slide,
+        description: v.description,
+        elements: v.elements
+      }));
+      
+      setViolations(formattedViolations);
+      setHasResults(true);
+      
+      toast({
+        title: "Analysis complete!",
+        description: `Found ${formattedViolations.length} violations across ${presentation.slides.length} slides`,
+      });
+      
+    } catch (error) {
+      console.error('Error processing file:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to process file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleReset = () => {

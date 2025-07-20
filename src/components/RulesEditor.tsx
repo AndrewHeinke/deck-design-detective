@@ -7,7 +7,9 @@ interface RulesEditorProps {
 
 const defaultRules = `- Text colors allowed: black, red
 - All titles must be font size 36 or higher  
-- No images allowed on title slides`;
+- No images allowed on title slides
+- Font family allowed: Arial, Helvetica
+- Maximum font size: 72pt`;
 
 export function RulesEditor({ value, onChange }: RulesEditorProps) {
   return (
@@ -26,8 +28,17 @@ export function RulesEditor({ value, onChange }: RulesEditorProps) {
         />
       </div>
       
-      <div className="text-xs text-muted-foreground">
+      <div className="text-xs text-muted-foreground space-y-2">
         <p>Use Markdown syntax to define your design rules. Each rule should be on a separate line starting with a dash (-).</p>
+        <div className="bg-muted p-3 rounded-md">
+          <p className="font-medium mb-1">Supported rule types:</p>
+          <ul className="space-y-1">
+            <li>• <strong>Colors:</strong> "Text colors allowed: black, red"</li>
+            <li>• <strong>Font size:</strong> "Font size minimum: 24pt" or "Font size 36 or higher"</li>
+            <li>• <strong>Font family:</strong> "Font family allowed: Arial, Helvetica"</li>
+            <li>• <strong>Images:</strong> "No images allowed on title slides"</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
